@@ -34,6 +34,10 @@ class WindowsBackend:
             self._reader = winapi.ScreenReader()
         return read_hp(self._reader, self.cfg, self.window)
 
+    def click_target(self) -> None:
+        if self.cfg.calibrated and self.window.alive():
+            self.window.click(*self.cfg.target_point)
+
     def toggle_pressed(self) -> bool:
         if self.toggle_vk is None:
             return False
@@ -139,6 +143,9 @@ class App(tk.Tk):
         for col, (label, var) in enumerate([("Touche suivre", self.follow_key), ("Toutes les (s)", self.follow_itv), ("Pause/reprise", self.toggle_key)]):
             ttk.Label(f, text=label).grid(row=0, column=col * 2, **pad)
             ttk.Entry(f, textvariable=var, width=7).grid(row=0, column=col * 2 + 1, **pad)
+        self.retarget_on = tk.BooleanVar(value=self.cfg.retarget_enabled)
+        ttk.Checkbutton(f, text="Re-cibler automatiquement le perso principal (clic sur sa barre dans la fenêtre de groupe)", variable=self.retarget_on).grid(row=1, column=0, columnspan=7, sticky="w", **pad)
+        ttk.Button(f, text="Tester le ciblage", command=self._test_target).grid(row=2, column=0, columnspan=2, sticky="w", **pad)
 
         # Démarrage + journal
         f = ttk.Frame(root)
@@ -194,6 +201,15 @@ class App(tk.Tk):
         self.window.press(key)
         self.log(f"Touche {self.test_key.get()} envoyée (mode {self.input_mode.get()})")
 
+    def _test_target(self) -> None:
+        if not self._need_window():
+            return
+        if not self.cfg.calibrated:
+            messagebox.showinfo("FlyffAssist", "Calibre d'abord la barre de PV (section 2).")
+            return
+        self.window.click(*self.cfg.target_point)
+        self.log(f"Clic de ciblage envoyé en {self.cfg.target_point}")
+
     def _calibrate(self, side: str) -> None:
         if not self._need_window():
             return
@@ -227,6 +243,7 @@ class App(tk.Tk):
         c.cast_delay_s = float(self.cast_delay.get())
         c.follow_enabled = self.follow_on.get()
         c.follow_key = self.follow_key.get().strip()
+        c.retarget_enabled = self.retarget_on.get()
         c.follow_interval_s = float(self.follow_itv.get())
         c.toggle_key = self.toggle_key.get().strip()
         return c

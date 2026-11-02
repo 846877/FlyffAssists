@@ -43,11 +43,18 @@ class Config:
     follow_enabled: bool = True
     follow_key: str = "z"  # touche « suivre la cible » par défaut dans Flyff Universe
     follow_interval_s: float = 5.0
+    # Re-cibler automatiquement le perso principal en cliquant sur lui dans
+    # la fenêtre de groupe du prêtre (au milieu de sa barre de PV).
+    retarget_enabled: bool = False
 
     # Raccourci global pour mettre en pause / reprendre
     toggle_key: str = "f8"
 
     tick_s: float = 0.1
+
+    @property
+    def target_point(self) -> tuple[int, int]:
+        return ((self.bar_x1 + self.bar_x2) // 2, self.bar_y)
 
     @property
     def calibrated(self) -> bool:

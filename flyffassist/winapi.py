@@ -103,6 +103,19 @@ class GameWindow:
             win32api.PostMessage(h, win32con.WM_KEYUP, key.vk, make_lparam(scan, up=True, alt=False))
 
 
+    def click(self, cx: int, cy: int) -> None:
+        """Clic gauche à (cx, cy), coordonnées client de la fenêtre du prêtre,
+        sans déplacer la vraie souris."""
+        h = self._input_hwnd()
+        sx, sy = self.client_to_screen(cx, cy)
+        x, y = win32gui.ScreenToClient(h, (sx, sy))  # la zone de rendu peut être décalée
+        lp = (y << 16) | (x & 0xFFFF)
+        win32api.PostMessage(h, win32con.WM_MOUSEMOVE, 0, lp)
+        win32api.PostMessage(h, win32con.WM_LBUTTONDOWN, win32con.MK_LBUTTON, lp)
+        time.sleep(0.04)
+        win32api.PostMessage(h, win32con.WM_LBUTTONUP, 0, lp)
+
+
 class ScreenReader:
     """Lit des pixels à l'écran. La fenêtre du prêtre doit être visible
     (pas réduite, pas cachée derrière une autre) : mets les deux fenêtres

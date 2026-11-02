@@ -17,6 +17,7 @@ class Backend(Protocol):
     def press(self, key: Key) -> None: ...
     def read_hp(self) -> float | None: ...
     def toggle_pressed(self) -> bool: ...
+    def click_target(self) -> None: ...
 
 
 class Brain:
@@ -34,6 +35,7 @@ class Brain:
         self.busy_until = 0.0  # on attend la fin d'une incantation
         self.last_heal = float("-inf")
         self.last_follow = float("-inf")
+        self.last_target = float("-inf")
         self.paused = False
         self.hp: float | None = None
 
@@ -43,6 +45,11 @@ class Brain:
             self.log("⏸ Pause" if self.paused else "▶ Reprise")
         if self.paused:
             return
+
+        # 0. Re-cibler le perso principal (clic dans la fenêtre de groupe)
+        if self.cfg.retarget_enabled and now - self.last_target >= self.cfg.follow_interval_s:
+            self.backend.click_target()
+            self.last_target = now
 
         self.hp = self.backend.read_hp()
 

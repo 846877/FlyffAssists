@@ -45,6 +45,9 @@ class FakeBackend:
     def read_hp(self):
         return self.hp
 
+    def click_target(self):
+        self.pressed.append("click")
+
     def toggle_pressed(self):
         t, self.toggle = self.toggle, False
         return t
@@ -110,3 +113,11 @@ def test_disabled_heal_and_follow():
     for t in range(10):
         brain.step(t)
     assert be.pressed == []
+
+
+def test_retarget_before_actions():
+    brain, be = make(retarget_enabled=True)
+    brain.step(0)
+    assert be.pressed[:2] == ["click", parse_key("2")]
+    brain.step(1)
+    assert be.pressed.count("click") == 1  # pas avant follow_interval_s
