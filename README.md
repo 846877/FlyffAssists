@@ -27,7 +27,7 @@ Google Chrome ou Microsoft Edge doit être installé.
 
 `F8` met en pause ou relance **depuis n'importe quelle fenêtre de Windows**.
 
-Touches acceptées : `1` à `0`, `alt+1` à `alt+0`, une lettre (`z`), `F1` à `F12`.
+**Régler une touche** : clique dans le champ, puis appuie sur la touche (avec Alt si besoin). L'appli enregistre exactement ta frappe, ce qui compte en AZERTY : le jeu prend un « z » tapé pour la touche « avancer » (ZQSD). Pour le suivi, enregistre la touche indiquée pour « Suivre » dans les options de touches du jeu.
 
 ## Limites
 

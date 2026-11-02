@@ -64,6 +64,14 @@
     const m = s.match(/^alt\s*\+\s*(.+)$/i);
     if (m) { alt = true; s = m[1].trim(); }
     let key, code;
+    // Touche enregistrée au clavier : « key@code », exactement ce que le jeu reçoit
+    // d'une vraie frappe (indispensable en AZERTY).
+    const rec = s.match(/^(.+)@([A-Za-z0-9]+)$/);
+    if (rec) {
+      key = rec[1] === "Space" ? " " : rec[1];
+      code = rec[2];
+      return { key, code, alt, label: (alt ? "Alt+" : "") + prettyCode(code, key) };
+    }
     if (/^[0-9]$/.test(s)) { key = s; code = "Digit" + s; }
     else if (/^[a-z]$/i.test(s)) { key = s.toLowerCase(); code = "Key" + s.toUpperCase(); }
     else if (/^f([1-9]|1[0-2])$/i.test(s)) { key = s.toUpperCase(); code = key; }
@@ -71,6 +79,19 @@
     else if (/^(space|espace)$/i.test(s)) { key = " "; code = "Space"; }
     else return null;
     return { key, code, alt, label: (alt ? "Alt+" : "") + (key === " " ? "Espace" : key.toUpperCase()) };
+  }
+
+  function prettyCode(code, key) {
+    const d = code.match(/^(?:Digit|Numpad)(.+)$/);
+    if (d) return d[1]; // en AZERTY, « 1 » produit « & » : on affiche le chiffre
+    if (key.length === 1 && key !== " ") return key.toUpperCase();
+    return code.replace(/^Key/, "");
+  }
+
+  // Transforme une vraie frappe en texte « key@code » (avec alt+ si besoin)
+  function recordKey(e) {
+    if (["Alt", "Control", "Shift", "Meta", "AltGraph"].includes(e.key)) return null;
+    return (e.altKey ? "alt+" : "") + (e.key === " " ? "Space" : e.key) + "@" + e.code;
   }
 
   let gameCanvas = null;
@@ -171,6 +192,8 @@
     if (follow && !state.queue.length && now >= state.busyUntil && now - state.lastFollow >= cfg.follow.interval) {
       press(follow);
       state.lastFollow = now;
+      state.follows = (state.follows || 0) + 1;
+      if (state.follows === 1 || state.follows % 20 === 0) log(`Suivi (${follow.label})`);
     }
   }
 
@@ -331,6 +354,12 @@
     ui.log = $("[data-log]");
 
     // Liaison des champs avec la config
+    // Affiche « Z » au lieu de « z@KeyW » dans les champs
+    const showLabel = (el) => {
+      const k = parseKey(getPath(el.dataset.bind));
+      el.dataset.raw = getPath(el.dataset.bind);
+      if (k && document.activeElement !== el && root.activeElement !== el) el.value = k.label;
+    };
     const getPath = (p) => p.split(".").reduce((o, k) => o[k], cfg);
     const setPath = (p, v) => {
       const ks = p.split(".");
@@ -342,6 +371,32 @@
       const v = getPath(p);
       if (el.type === "checkbox") el.checked = !!v;
       else el.value = v;
+      if (el.type === "text" && p !== "toggleKey") {
+        // On clique dans le champ, puis on appuie sur la touche voulue
+        el.placeholder = el.placeholder || "–";
+        el.title = "Clique ici puis appuie sur la touche (Retour arrière pour effacer)";
+        el.addEventListener("focus", () => { el.value = ""; el.placeholder = "appuie…"; });
+        el.addEventListener("blur", () => {
+          el.placeholder = "–";
+          showLabel(el);
+        });
+        el.addEventListener("keydown", (e) => {
+          e.preventDefault();
+          if (e.key === "Escape") return el.blur();
+          let val = "";
+          if (e.key !== "Backspace" && e.key !== "Delete") {
+            val = recordKey(e);
+            if (!val) return; // modificateur seul : on attend la vraie touche
+          }
+          setPath(p, val);
+          saveConfig();
+          el.value = val;
+          el.blur();
+          if (val) log(`Touche enregistrée : ${parseKey(val).label}`);
+        });
+        showLabel(el);
+        return;
+      }
       el.addEventListener(el.type === "range" ? "input" : "change", () => {
         let val = el.type === "checkbox" ? el.checked : el.value;
         if (el.type === "number" || el.type === "range") {
@@ -371,10 +426,23 @@
       render();
     });
     $("[data-test]").addEventListener("click", () => {
-      const k = parseKey($("[data-testkey]").value);
+      const tk = $("[data-testkey]");
+      const k = parseKey(tk.dataset.raw || tk.value);
       if (!k) return log("Touche non reconnue");
       press(k);
       log(`Test : ${k.label} envoyée`);
+    });
+    const tk = $("[data-testkey]");
+    tk.dataset.raw = "1";
+    tk.title = "Clique ici puis appuie sur la touche à tester";
+    tk.addEventListener("focus", () => { tk.value = ""; tk.placeholder = "appuie…"; });
+    tk.addEventListener("blur", () => { tk.value = parseKey(tk.dataset.raw)?.label || ""; });
+    tk.addEventListener("keydown", (e) => {
+      e.preventDefault();
+      const v = recordKey(e);
+      if (!v) return;
+      tk.dataset.raw = v;
+      tk.blur();
     });
     $("[data-calib]").addEventListener("click", calibrate);
     $("[data-collapse]").addEventListener("click", () => {
