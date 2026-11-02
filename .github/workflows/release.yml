@@ -1,0 +1,27 @@
+name: Publier l'extension
+
+on:
+  push:
+    branches: ["**"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Vérifier la syntaxe
+        run: node --check extension/flyffassist.js
+      - name: Zipper l'extension
+        run: cd extension && zip -r ../FlyffAssist-extension.zip .
+      - name: Publier la release « latest »
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release delete latest -y --cleanup-tag || true
+          gh release create latest FlyffAssist-extension.zip --target "${{ github.sha }}" \
+            --prerelease --title "FlyffAssist (dernière version)" \
+            --notes "Extension Chrome. Construite depuis ${{ github.ref_name }} (${{ github.sha }})."
