@@ -1,4 +1,4 @@
-name: Publier l'extension
+name: Publier FlyffAssist
 
 on:
   push:
@@ -10,18 +10,36 @@ permissions:
 
 jobs:
   release:
-    runs-on: ubuntu-latest
+    runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Vérifier la syntaxe
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Vérifier la syntaxe du script
         run: node --check extension/flyffassist.js
-      - name: Zipper l'extension
-        run: cd extension && zip -r ../FlyffAssist-extension.zip .
+      - name: Construire FlyffAssist.exe
+        run: |
+          pip install -r app/requirements.txt pyinstaller
+          pyinstaller --onefile --windowed --name FlyffAssist --add-data "extension/flyffassist.js;." app/flyffassist_app.py
+      - name: Zipper l'extension (option)
+        shell: pwsh
+        run: Compress-Archive -Path extension/* -DestinationPath FlyffAssist-extension.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: FlyffAssist
+          path: |
+            dist/FlyffAssist.exe
+            FlyffAssist-extension.zip
       - name: Publier la release « latest »
+        shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh release delete latest -y --cleanup-tag || true
-          gh release create latest FlyffAssist-extension.zip --target "${{ github.sha }}" \
+          gh release create latest dist/FlyffAssist.exe FlyffAssist-extension.zip --target "${{ github.sha }}" \
             --prerelease --title "FlyffAssist (dernière version)" \
-            --notes "Extension Chrome. Construite depuis ${{ github.ref_name }} (${{ github.sha }})."
+            --notes "Construit depuis ${{ github.ref_name }} (${{ github.sha }})."

@@ -183,11 +183,14 @@
     render();
     if (!fromRemote) channel?.postMessage({ type: "toggle" });
   }
+  // Appelé par FlyffAssist.exe quand on appuie sur la touche pause n'importe où dans Windows
+  window.__flyffAssistToggle = () => togglePause(false);
   channel?.addEventListener("message", (e) => {
     if (e.data?.type === "toggle") togglePause(true);
   });
   window.addEventListener("keydown", (e) => {
     if (!e.isTrusted || e.repeat) return;
+    if (window.__flyffAssistExe) return; // l'exe gère déjà la touche pause dans tout Windows
     if (e.key.toUpperCase() === String(cfg.toggleKey).toUpperCase()) {
       if (state.active) togglePause(false);
       else channel?.postMessage({ type: "toggle" });

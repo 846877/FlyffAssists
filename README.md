@@ -1,38 +1,48 @@
 # FlyffAssist
 
-Extension Chrome pour **Flyff Universe**, à utiliser **pendant que tu joues** : ton perso soutien suit ton perso principal, le soigne quand ses PV passent sous un seuil et relance ses buffs tout seul.
+Application Windows pour **Flyff Universe**, à utiliser **pendant que tu joues** : ton perso soutien suit ton perso principal, le soigne quand ses PV passent sous un seuil et relance ses buffs tout seul.
 
-## Pourquoi une extension
+## Comment ça marche
 
-L'extension tourne dans la page du jeu et envoie les touches directement au jeu, comme les autres extensions Flyff. Ça marche même quand la fenêtre du soutien n'est pas au premier plan, alors qu'un programme Windows externe voit ses touches ignorées par Chrome dans ce cas.
+`FlyffAssist.exe` ouvre **lui-même** la fenêtre de ton perso soutien, dans Chrome (ou Edge), avec un profil dédié. Il pilote cette fenêtre de l'intérieur grâce au protocole de débogage de Chrome. Les touches partent depuis la page du jeu, donc la fenêtre du soutien n'a pas besoin d'être au premier plan. Un programme externe classique ne peut pas faire ça : Chrome ignore les touches qu'il envoie à une fenêtre en arrière-plan.
+
+Ton perso principal, lui, reste dans ton navigateur habituel, comme avant.
 
 ## Installation
 
-1. Télécharge `FlyffAssist-extension.zip` dans la [release « latest »](../../releases/tag/latest) et dézippe-le dans un dossier que tu gardes.
-2. Dans Chrome, ouvre `chrome://extensions` et active le **Mode développeur** (en haut à droite).
-3. Clique sur **Charger l'extension non empaquetée** et choisis le dossier dézippé.
-4. Recharge les pages du jeu (F5).
+1. Télécharge `FlyffAssist.exe` dans la [release « latest »](../../releases/tag/latest).
+2. Lance-le. Windows SmartScreen peut afficher un avertissement, car l'exe n'est pas signé : clique sur « Informations complémentaires » puis « Exécuter quand même ».
 
-Pour une mise à jour : remplace le contenu du dossier, clique sur ↻ sur la carte de l'extension, puis recharge le jeu.
+Google Chrome ou Microsoft Edge doit être installé.
 
 ## Utilisation
 
-Un panneau FlyffAssist apparaît dans chaque fenêtre du jeu. Tu peux le déplacer en le tirant par son titre, et le réduire avec ▾.
+1. Clique sur **Ouvrir la fenêtre du soutien**.
+2. Connecte-toi avec ton soutien. La connexion est mémorisée pour les fois suivantes.
+3. Un panneau FlyffAssist apparaît dans le jeu. Tu peux le déplacer par son titre et le réduire avec ▾.
+4. **Cible ton perso principal** : la barre de PV de la cible s'affiche en haut de l'écran.
+5. **PV de la cible** : ton perso principal doit être à 100 % PV. Clique sur « Calibrer la barre », puis sur le début (gauche) et la fin (droite) de la barre rouge en haut de l'écran. Le panneau doit afficher environ 100 %.
+6. Règle **Soin** (touche, seuil), **Buffs** (jusqu'à 8, chacun avec son temps de relance en secondes) et **Suivi** (`Z` par défaut, la touche « suivre la cible » du jeu).
+7. Clique sur **▶ Activer sur ce perso**.
 
-1. **Dans la fenêtre du soutien**, cible ton perso principal (clic sur lui). La barre de PV de la cible s'affiche en haut de l'écran.
-2. **PV de la cible** : ton perso principal doit être à 100 % PV. Clique sur « Calibrer la barre », puis sur le début (gauche) et la fin (droite) de la barre rouge en haut de l'écran. Le panneau doit afficher environ 100 %.
-3. **Soin** : la touche de ton soin et le seuil de PV.
-4. **Buffs** : jusqu'à 8 buffs, chacun avec sa touche et son temps de relance en secondes. Tous partent à l'activation.
-5. **Suivi** : `Z` par défaut (touche « suivre la cible » du jeu), renvoyée régulièrement.
-6. Clique sur **▶ Activer sur ce perso**. Ne l'active que dans la fenêtre du soutien.
-
-`F8` met en pause ou relance, **y compris depuis la fenêtre de ton perso principal**.
+`F8` met en pause ou relance **depuis n'importe quelle fenêtre de Windows**.
 
 Touches acceptées : `1` à `0`, `alt+1` à `alt+0`, une lettre (`z`), `F1` à `F12`.
-
-Les réglages sont communs aux deux fenêtres. L'état « activé » est propre à chaque fenêtre.
 
 ## Limites
 
 - Si tu redimensionnes la fenêtre du soutien, recalibre la barre de PV.
 - Le soin et les buffs partent sur la cible actuelle du soutien : garde ton perso principal en cible.
+
+## Variante extension Chrome
+
+Le même assistant existe en extension (`FlyffAssist-extension.zip` dans la release), à charger depuis `chrome://extensions` en mode développeur.
+
+## Développement
+
+```
+pip install -r app/requirements.txt
+python app/flyffassist_app.py
+```
+
+Le cœur de l'assistant est `extension/flyffassist.js` : panneau, lecture des PV, envoi des touches. Il est partagé entre l'exe et l'extension.
