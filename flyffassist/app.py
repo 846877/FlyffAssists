@@ -98,6 +98,8 @@ class App(tk.Tk):
         # Soin
         f = ttk.LabelFrame(root, text="3. Soin", padding=6)
         f.grid(row=2, column=0, sticky="ew", **pad)
+        self.heal_on = tk.BooleanVar(value=self.cfg.heal_enabled)
+        ttk.Checkbutton(f, text="Activé", variable=self.heal_on).grid(row=0, column=6, **pad)
         self.heal_key = tk.StringVar(value=self.cfg.heal_key)
         self.heal_threshold = tk.DoubleVar(value=self.cfg.heal_threshold)
         self.heal_cd = tk.DoubleVar(value=self.cfg.heal_cooldown_s)
@@ -106,7 +108,7 @@ class App(tk.Tk):
             ttk.Entry(f, textvariable=var, width=w).grid(row=0, column=col * 2 + 1, **pad)
 
         # Buffs
-        f = ttk.LabelFrame(root, text="4. Buffs (relancés automatiquement)", padding=6)
+        f = ttk.LabelFrame(root, text="4. Buffs (coche ceux à relancer automatiquement)", padding=6)
         f.grid(row=3, column=0, sticky="ew", **pad)
         ttk.Label(f, text="Actif").grid(row=0, column=0)
         ttk.Label(f, text="Touche").grid(row=0, column=1)
@@ -129,6 +131,8 @@ class App(tk.Tk):
         # Suivi
         f = ttk.LabelFrame(root, text="5. Suivi", padding=6)
         f.grid(row=4, column=0, sticky="ew", **pad)
+        self.follow_on = tk.BooleanVar(value=self.cfg.follow_enabled)
+        ttk.Checkbutton(f, text="Activé", variable=self.follow_on).grid(row=0, column=6, **pad)
         self.follow_key = tk.StringVar(value=self.cfg.follow_key)
         self.follow_itv = tk.DoubleVar(value=self.cfg.follow_interval_s)
         self.toggle_key = tk.StringVar(value=self.cfg.toggle_key)
@@ -214,12 +218,14 @@ class App(tk.Tk):
     def _read_form(self) -> Config:
         c = self.cfg
         c.bar_tolerance = int(self.tolerance.get())
+        c.heal_enabled = self.heal_on.get()
         c.heal_key = self.heal_key.get().strip()
         c.heal_threshold = float(self.heal_threshold.get())
         c.heal_cooldown_s = float(self.heal_cd.get())
         for b, (en, key, itv) in zip(c.buffs, self.buff_vars):
             b.enabled, b.key, b.interval_s = en.get(), key.get().strip(), float(itv.get())
         c.cast_delay_s = float(self.cast_delay.get())
+        c.follow_enabled = self.follow_on.get()
         c.follow_key = self.follow_key.get().strip()
         c.follow_interval_s = float(self.follow_itv.get())
         c.toggle_key = self.toggle_key.get().strip()

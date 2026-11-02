@@ -2,10 +2,14 @@
 from __future__ import annotations
 
 import json
+import sys
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 
-CONFIG_PATH = Path(__file__).resolve().parent.parent / "config.json"
+if getattr(sys, "frozen", False):  # .exe PyInstaller : config à côté de l'exe
+    CONFIG_PATH = Path(sys.executable).resolve().parent / "config.json"
+else:
+    CONFIG_PATH = Path(__file__).resolve().parent.parent / "config.json"
 
 
 @dataclass
@@ -18,6 +22,7 @@ class Buff:
 @dataclass
 class Config:
     # Soin
+    heal_enabled: bool = True
     heal_key: str = "1"
     heal_threshold: float = 70.0  # % de PV sous lequel on soigne
     heal_cooldown_s: float = 1.5  # délai mini entre deux soins
@@ -35,7 +40,8 @@ class Config:
     cast_delay_s: float = 1.8
 
     # Suivi
-    follow_key: str = ""
+    follow_enabled: bool = True
+    follow_key: str = "z"  # touche « suivre la cible » par défaut dans Flyff Universe
     follow_interval_s: float = 5.0
 
     # Raccourci global pour mettre en pause / reprendre

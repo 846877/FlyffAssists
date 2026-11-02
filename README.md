@@ -13,7 +13,9 @@ Assistant de soutien pour **Flyff Universe**, à utiliser **pendant que tu joues
 1. Installe Python 3.11 ou plus récent depuis python.org (coche « Add to PATH »).
 2. Double-clique sur `lancer.bat`. La première fois, il crée un environnement virtuel et installe les dépendances (`pywin32`, `mss`).
 
-Ou à la main : `pip install -r requirements.txt` puis `python -m flyffassist`.
+**Le plus simple** : télécharge `FlyffAssist.exe` dans la release « latest » du repo et lance-le. La config est enregistrée dans `config.json` à côté de l'exe.
+
+Ou à partir des sources : `pip install -r requirements.txt` puis `python -m flyffassist`.
 
 ## Mise en place dans le jeu
 
@@ -27,7 +29,9 @@ Ou à la main : `pip install -r requirements.txt` puis `python -m flyffassist`.
 2. **Barre de PV** : ton perso principal doit être à 100 % PV. Clique sur « Bord gauche » et pointe le début de sa barre de PV dans la fenêtre de groupe du prêtre. Fais pareil avec « Bord droit ». Le champ « PV lus » doit afficher environ 100 %. Si la valeur est fausse, ajuste la tolérance.
 3. **Soin** : touche, seuil en %, délai minimum entre deux soins.
 4. **Buffs** : jusqu'à 8 buffs, chacun avec sa touche et son intervalle de relance en secondes. Tous partent au démarrage.
-5. **Suivi** : la touche qui fait suivre la cible, et à quelle fréquence la renvoyer.
+5. **Suivi** : par défaut `Z`, la touche « suivre » de Flyff Universe. Le prêtre suit sa cible actuelle, donc cible ton perso principal une fois au début (clic sur lui ou dans la fenêtre de groupe). L'appli renvoie `Z` toutes les 5 secondes, car le suivi du jeu décroche parfois (téléportation, combat, obstacle).
+
+Chaque section (soin, chaque buff, suivi) a sa case « Activé » pour l'allumer ou l'éteindre.
 
 `F8` (réglable) met l'assistant en pause ou le relance, depuis n'importe quelle fenêtre.
 

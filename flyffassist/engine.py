@@ -26,8 +26,8 @@ class Brain:
         self.cfg = cfg
         self.backend = backend
         self.log = log
-        self.heal_key = parse_key(cfg.heal_key) if cfg.heal_key else None
-        self.follow_key = parse_key(cfg.follow_key) if cfg.follow_key else None
+        self.heal_key = parse_key(cfg.heal_key) if cfg.heal_enabled and cfg.heal_key else None
+        self.follow_key = parse_key(cfg.follow_key) if cfg.follow_enabled and cfg.follow_key else None
         self.buffs = [(parse_key(b.key), b.interval_s, b.key) for b in cfg.buffs if b.enabled and b.key]
         self.last_buff = [float("-inf")] * len(self.buffs)  # tout est lancé au démarrage
         self.queue: list[int] = []
@@ -47,8 +47,8 @@ class Brain:
         self.hp = self.backend.read_hp()
 
         # 1. Soin, toujours prioritaire
-        low = self.hp is not None and self.hp < self.cfg.heal_threshold
-        if low and self.heal_key and now - self.last_heal >= self.cfg.heal_cooldown_s:
+        low = self.heal_key is not None and self.hp is not None and self.hp < self.cfg.heal_threshold
+        if low and now - self.last_heal >= self.cfg.heal_cooldown_s:
             self.backend.press(self.heal_key)
             self.last_heal = now
             self.busy_until = now + self.cfg.cast_delay_s

@@ -100,3 +100,13 @@ def test_config_roundtrip(tmp_path):
     c.save(p)
     d = Config.load(p)
     assert d == c and len(d.buffs) == 8
+
+
+def test_disabled_heal_and_follow():
+    brain, be = make(heal_enabled=False, follow_enabled=False)
+    brain.cfg.buffs = []
+    brain.buffs, brain.last_buff = [], []
+    be.hp = 10
+    for t in range(10):
+        brain.step(t)
+    assert be.pressed == []
