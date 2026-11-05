@@ -22,7 +22,7 @@ Google Chrome ou Microsoft Edge doit être installé.
 3. Un panneau FlyffAssist apparaît dans le jeu. Tu peux le déplacer par son titre et le réduire avec ▾.
 4. **Cible ton perso principal** : la barre de PV de la cible s'affiche en haut de l'écran.
 5. **PV de la cible** : ton perso principal doit être à 100 % PV. Clique sur « Calibrer la barre », puis sur le début (gauche) et la fin (droite) de la barre rouge en haut de l'écran. Le panneau doit afficher environ 100 %.
-6. Règle **Soin** (touche, seuil), **Buffs** (jusqu'à 8, chacun avec son temps de relance en secondes) et **Suivi** (`Z` par défaut, la touche « suivre la cible » du jeu).
+6. Règle **Soin** (touche, seuil), **Buffs** (autant que tu veux avec « + 2 sorts », barres 1-0, Alt et Ctrl, chacun avec son temps de relance en secondes) et **Suivi** (`Z` par défaut, la touche « suivre la cible » du jeu).
 7. Clique sur **▶ Activer sur ce perso**.
 
 `F8` met en pause ou relance **depuis n'importe quelle fenêtre de Windows**.

@@ -45,7 +45,7 @@
         if (cfg[k] && typeof cfg[k] === "object" && !Array.isArray(cfg[k]) && saved[k]) Object.assign(cfg[k], saved[k]);
         else cfg[k] = saved[k];
       }
-      while (cfg.buffs.length < 8) cfg.buffs.push({ enabled: false, key: "", interval: 300 });
+      if (!Array.isArray(cfg.buffs) || !cfg.buffs.length) cfg.buffs = structuredClone(DEFAULTS.buffs);
       return cfg;
     } catch {
       return structuredClone(DEFAULTS);
@@ -60,9 +60,12 @@
   function parseKey(text) {
     let s = String(text || "").trim();
     if (!s) return null;
-    let alt = false;
-    const m = s.match(/^alt\s*\+\s*(.+)$/i);
-    if (m) { alt = true; s = m[1].trim(); }
+    let alt = false, ctrl = false, m;
+    while ((m = s.match(/^(alt|ctrl)\s*\+\s*(.+)$/i))) {
+      if (m[1].toLowerCase() === "alt") alt = true; else ctrl = true;
+      s = m[2].trim();
+    }
+    const pre = (ctrl ? "Ctrl+" : "") + (alt ? "Alt+" : "");
     let key, code;
     // Touche enregistrée au clavier : « key@code », exactement ce que le jeu reçoit
     // d'une vraie frappe (indispensable en AZERTY).
@@ -70,7 +73,7 @@
     if (rec) {
       key = rec[1] === "Space" ? " " : rec[1];
       code = rec[2];
-      return { key, code, alt, label: (alt ? "Alt+" : "") + prettyCode(code, key) };
+      return { key, code, alt, ctrl, label: pre + prettyCode(code, key) };
     }
     if (/^[0-9]$/.test(s)) { key = s; code = "Digit" + s; }
     else if (/^[a-z]$/i.test(s)) { key = s.toLowerCase(); code = "Key" + s.toUpperCase(); }
@@ -78,7 +81,7 @@
     else if (/^tab$/i.test(s)) { key = "Tab"; code = "Tab"; }
     else if (/^(space|espace)$/i.test(s)) { key = " "; code = "Space"; }
     else return null;
-    return { key, code, alt, label: (alt ? "Alt+" : "") + (key === " " ? "Espace" : key.toUpperCase()) };
+    return { key, code, alt, ctrl, label: pre + (key === " " ? "Espace" : key.toUpperCase()) };
   }
 
   function prettyCode(code, key) {
@@ -91,19 +94,23 @@
   // Transforme une vraie frappe en texte « key@code » (avec alt+ si besoin)
   function recordKey(e) {
     if (["Alt", "Control", "Shift", "Meta", "AltGraph"].includes(e.key)) return null;
-    return (e.altKey ? "alt+" : "") + (e.key === " " ? "Space" : e.key) + "@" + e.code;
+    return (e.ctrlKey ? "ctrl+" : "") + (e.altKey ? "alt+" : "") + (e.key === " " ? "Space" : e.key) + "@" + e.code;
   }
 
   let gameCanvas = null;
 
   async function press(k) {
     if (!gameCanvas || !k) return;
-    const ev = { key: k.key, code: k.code, altKey: k.alt };
-    if (k.alt) gameCanvas.dispatchEvent(new KeyboardEvent("keydown", { key: "Alt", code: "AltLeft", altKey: true }));
-    gameCanvas.dispatchEvent(new KeyboardEvent("keydown", ev));
+    const mods = { altKey: !!k.alt, ctrlKey: !!k.ctrl };
+    const ev = { key: k.key, code: k.code, ...mods };
+    const send = (type, init) => gameCanvas.dispatchEvent(new KeyboardEvent(type, init));
+    if (k.ctrl) send("keydown", { key: "Control", code: "ControlLeft", ...mods });
+    if (k.alt) send("keydown", { key: "Alt", code: "AltLeft", ...mods });
+    send("keydown", ev);
     await sleep(60);
-    gameCanvas.dispatchEvent(new KeyboardEvent("keyup", ev));
-    if (k.alt) gameCanvas.dispatchEvent(new KeyboardEvent("keyup", { key: "Alt", code: "AltLeft", altKey: false }));
+    send("keyup", ev);
+    if (k.alt) send("keyup", { key: "Alt", code: "AltLeft", altKey: false, ctrlKey: !!k.ctrl });
+    if (k.ctrl) send("keyup", { key: "Control", code: "ControlLeft", altKey: false, ctrlKey: false });
   }
 
   // ---------------------------------------------------------------- PV
@@ -171,13 +178,13 @@
 
     // 2. Buffs
     cfg.buffs.forEach((b, i) => {
-      if (b.enabled && parseKey(b.key) && !state.queue.includes(i) && now - state.lastBuff[i] >= b.interval) {
+      if (b.enabled && parseKey(b.key) && !state.queue.includes(i) && now - (state.lastBuff[i] ?? -Infinity) >= b.interval) {
         state.queue.push(i);
       }
     });
     if (state.queue.length && now >= state.busyUntil) {
       const i = state.queue.shift();
-      const k = parseKey(cfg.buffs[i].key);
+      const k = cfg.buffs[i] && parseKey(cfg.buffs[i].key);
       if (k && cfg.buffs[i].enabled) {
         press(k);
         state.lastBuff[i] = now;
@@ -285,7 +292,7 @@
 
   const sw = (bind) => `<label class="sw"><input type="checkbox" data-bind="${bind}"><span></span></label>`;
 
-  function buildUi() {
+  function buildUi(quiet) {
     const host = document.createElement("div");
     host.id = "flyffassist-host";
     // Empêche le jeu de recevoir ce qu'on tape dans le panneau
@@ -325,7 +332,7 @@
           <div class="sec">
             <h4>Buffs <span style="text-transform:none;letter-spacing:0;color:#9d917a">touche · relance (s)</span></h4>
             <div class="buffs">${buffRows}</div>
-            <div class="row"><span class="grow"></span><label>Durée d'un sort (s)</label><input type="number" step="0.1" min="0.3" data-bind="castDelay"></div>
+            <div class="row"><button class="btn" data-addbuff>+ 2 sorts</button><button class="btn" data-delbuff title="Retire les 2 derniers emplacements">−</button><span class="grow"></span><label>Durée d'un sort (s)</label><input type="number" step="0.1" min="0.3" data-bind="castDelay"></div>
           </div>
 
           <div class="sec">
@@ -445,6 +452,19 @@
       tk.blur();
     });
     $("[data-calib]").addEventListener("click", calibrate);
+    $("[data-addbuff]").addEventListener("click", () => {
+      if (cfg.buffs.length >= 40) return log("40 sorts maximum");
+      cfg.buffs.push({ enabled: false, key: "", interval: 300 }, { enabled: false, key: "", interval: 300 });
+      saveConfig();
+      rebuildUi(true);
+    });
+    $("[data-delbuff]").addEventListener("click", () => {
+      if (cfg.buffs.length <= 2) return;
+      cfg.buffs.splice(-2, 2);
+      state.queue = state.queue.filter((i) => i < cfg.buffs.length);
+      saveConfig();
+      rebuildUi(true);
+    });
     $("[data-collapse]").addEventListener("click", () => {
       cfg.panel.collapsed = !cfg.panel.collapsed;
       saveConfig();
@@ -470,10 +490,24 @@
       window.addEventListener("pointerup", up, true);
     });
 
+    ui.host = host;
     document.documentElement.appendChild(host);
     place();
     render();
-    log("Prêt. Active-le dans la fenêtre du soutien.");
+    if (!quiet) log("Prêt. Active-le dans la fenêtre du soutien.");
+  }
+
+  // Reconstruit le panneau (après ajout/retrait de sorts) en gardant le défilement
+  function rebuildUi(scrollToBuffs) {
+    const keep = logs.slice();
+    const scroll = ui.root?.querySelector(".body")?.scrollTop || 0;
+    ui.host?.remove();
+    buildUi(true);
+    logs.splice(0, logs.length, ...keep);
+    ui.log.textContent = logs.join("\n");
+    const body = ui.root.querySelector(".body");
+    body.scrollTop = scroll;
+    if (scrollToBuffs) ui.root.querySelector("[data-addbuff]").scrollIntoView({ block: "nearest" });
   }
 
   function place() {
