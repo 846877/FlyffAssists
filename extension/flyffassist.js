@@ -24,12 +24,13 @@
 
   const STORE_KEY = "flyffassist.config.v1";
   const ACTIVE_KEY = "flyffassist.active"; // par onglet (sessionStorage)
+  const MIN_CAST = 1.0; // en dessous, les sorts s'enchaînent trop vite et le jeu en ignore
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
   const DEFAULTS = {
     heal: { enabled: true, key: "1", threshold: 70, cooldown: 1.5 },
     buffs: Array.from({ length: 8 }, () => ({ enabled: false, key: "", interval: 300 })),
-    castDelay: 1.8,
+    castDelay: 1.8, // le jeu ignore une touche envoyée pendant une incantation
     follow: { enabled: true, key: "z", interval: 3 },
     bar: null, // { x1, x2, y, color: [r,g,b], cw, ch } en pixels du canvas
     tolerance: 60,
@@ -45,6 +46,7 @@
         if (cfg[k] && typeof cfg[k] === "object" && !Array.isArray(cfg[k]) && saved[k]) Object.assign(cfg[k], saved[k]);
         else cfg[k] = saved[k];
       }
+      if (!(cfg.castDelay >= MIN_CAST)) cfg.castDelay = 1.5;
       if (!Array.isArray(cfg.buffs) || !cfg.buffs.length) cfg.buffs = structuredClone(DEFAULTS.buffs);
       return cfg;
     } catch {
@@ -130,8 +132,12 @@
   function readHp() {
     const b = cfg.bar;
     if (!gameCanvas || !b || b.x2 <= b.x1) return null;
-    if (b.cw !== gameCanvas.width || b.ch !== gameCanvas.height) return null; // fenêtre redimensionnée
-    const d = readPixels(b.x1, b.y, b.x2 - b.x1 + 1);
+    // La barre de la cible est centrée en haut de l'écran : si la fenêtre change
+    // de largeur, on la décale de la moitié de la différence.
+    const dx = Math.round((gameCanvas.width - (b.cw || gameCanvas.width)) / 2);
+    const x1 = b.x1 + dx;
+    if (x1 < 0 || b.x2 + dx >= gameCanvas.width || b.y >= gameCanvas.height) return null;
+    const d = readPixels(x1, b.y, b.x2 - b.x1 + 1);
     const n = d.length / 4;
     let last = -1;
     for (let i = 0; i < n; i++) if (dist(d, i * 4, b.color) <= cfg.tolerance) last = i;
@@ -162,6 +168,10 @@
     state.hp = readHp();
     if (!state.active || state.paused) return;
     const now = performance.now() / 1000;
+    if (cfg.heal.enabled && state.hp === null && now - (state.lastHpWarn || -Infinity) > 30) {
+      state.lastHpWarn = now;
+      log(cfg.bar ? "⚠ PV illisibles : cible ton perso principal, ou recalibre la barre" : "⚠ Barre de PV non calibrée : pas de soin");
+    }
 
     // 1. Soin prioritaire
     const heal = cfg.heal.enabled ? parseKey(cfg.heal.key) : null;
@@ -170,7 +180,7 @@
       if (now - state.lastHeal >= cfg.heal.cooldown) {
         press(heal);
         state.lastHeal = now;
-        state.busyUntil = now + cfg.castDelay;
+        state.busyUntil = now + Math.max(MIN_CAST, cfg.castDelay);
         log(`Soin (PV ${state.hp} %)`);
       }
       return;
@@ -188,7 +198,7 @@
       if (k && cfg.buffs[i].enabled) {
         press(k);
         state.lastBuff[i] = now;
-        state.busyUntil = now + cfg.castDelay;
+        state.busyUntil = now + Math.max(MIN_CAST, cfg.castDelay);
         log(`Buff ${k.label}`);
       }
       return;
@@ -332,7 +342,7 @@
           <div class="sec">
             <h4>Buffs <span style="text-transform:none;letter-spacing:0;color:#9d917a">touche · relance (s)</span></h4>
             <div class="buffs">${buffRows}</div>
-            <div class="row"><button class="btn" data-addbuff>+ 2 sorts</button><button class="btn" data-delbuff title="Retire les 2 derniers emplacements">−</button><span class="grow"></span><label>Durée d'un sort (s)</label><input type="number" step="0.1" min="0.3" data-bind="castDelay"></div>
+            <div class="row"><button class="btn" data-addbuff>+ 2 sorts</button><button class="btn" data-delbuff title="Retire les 2 derniers emplacements">−</button><span class="grow"></span><label>Durée d'un sort (s)</label><input type="number" step="0.1" min="1" data-bind="castDelay" title="Temps entre deux sorts. Minimum 1 s, sinon le jeu ignore les touches envoyées pendant une incantation."></div>
           </div>
 
           <div class="sec">
@@ -409,6 +419,7 @@
         if (el.type === "number" || el.type === "range") {
           val = parseFloat(String(val).replace(",", "."));
           if (!isFinite(val)) { el.value = getPath(p); return; }
+          if (p === "castDelay" && val < MIN_CAST) { val = MIN_CAST; el.value = val; log("Durée d'un sort : 1 s minimum"); }
         }
         if (el.type === "text" && p !== "toggleKey" && val.trim() && !parseKey(val)) {
           log(`Touche « ${val} » non reconnue (ex. 1, 0, alt+3, z, F1)`);
@@ -528,6 +539,7 @@
     const hp = state.hp;
     ui.hpfill.style.width = (hp ?? 0) + "%";
     ui.hptxt.textContent = hp === null ? (cfg.bar ? "?" : "–") : hp + " %";
+    ui.hptxt.title = hp === null && cfg.bar ? "Barre illisible : cible ton perso principal, ou recalibre" : "";
   }
 
   // Calibrage : deux clics sur la barre de PV de la cible
@@ -596,10 +608,6 @@
       const c2 = findCanvas();
       if (c2) gameCanvas = c2; // au cas où le jeu recrée son canvas
       render();
-      if (cfg.bar && gameCanvas && (cfg.bar.cw !== gameCanvas.width || cfg.bar.ch !== gameCanvas.height) && !state.warnedSize) {
-        state.warnedSize = true;
-        log("⚠ Taille de fenêtre changée : recalibre la barre de PV");
-      }
     }, 300);
   }, 500);
 })();
